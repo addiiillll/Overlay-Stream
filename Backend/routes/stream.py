@@ -84,7 +84,11 @@ def start_rtsp_conversion(rtsp_url, stream_id, ffmpeg_path, username=None, passw
     try:
         # Create directory for this stream
         stream_dir = STREAMS_DIR / stream_id
-        stream_dir.mkdir(exist_ok=True)
+        stream_dir.mkdir(exist_ok=True, parents=True)
+
+        # Ensure directory is writable
+        import stat
+        stream_dir.chmod(stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
 
         # Build FFmpeg command with authentication and connection options
         ffmpeg_cmd = [ffmpeg_path]
@@ -118,46 +122,28 @@ def start_rtsp_conversion(rtsp_url, stream_id, ffmpeg_path, username=None, passw
         else:
             ffmpeg_cmd.extend(['-i', rtsp_url])
 
-        # Add video and audio encoding options (optimized for live streaming)
+        # Add video and audio encoding options (simplified for compatibility)
         ffmpeg_cmd.extend([
-            '-c:v', 'libx264',           # H.264 video codec
-            '-c:a', 'aac',               # AAC audio codec
-            '-preset', 'fast',           # Fast encoding preset (balance speed/quality)
-            '-tune', 'zerolatency',      # Zero latency tuning for live streams
-            '-profile:v', 'main',        # Main profile for better compatibility
-            '-level', '4.0',             # H.264 level 4.0
-            '-pix_fmt', 'yuv420p',       # Pixel format for web compatibility
-            '-g', '60',                  # GOP size (2 seconds at 30fps)
-            '-keyint_min', '60',         # Minimum keyframe interval
-            '-sc_threshold', '0',        # Disable scene change detection
-            '-b:v', '800k',              # Video bitrate
-            '-maxrate', '1000k',         # Maximum bitrate
-            '-bufsize', '1600k',         # Buffer size (2x bitrate)
-            '-b:a', '128k',              # Audio bitrate
-            '-ar', '44100',              # Audio sample rate
-            '-ac', '2',                  # Audio channels (stereo)
-            '-r', '30',                  # Force 30fps output
-            '-vsync', 'cfr',             # Constant frame rate
+            '-c:v', 'copy',              # Copy video codec (no re-encoding)
+            '-c:a', 'copy',              # Copy audio codec (no re-encoding)
         ])
 
-        # Add HLS specific options (optimized for stability and compatibility)
+        # Add HLS specific options (simplified for compatibility)
         ffmpeg_cmd.extend([
             '-f', 'hls',                 # HLS format
-            '-hls_time', '4',            # 4-second segments (balance between latency and stability)
-            '-hls_list_size', '6',       # Keep 6 segments (better buffering)
-            '-hls_wrap', '10',           # Wrap segment numbers after 10 (prevents overflow)
-            '-hls_flags', 'delete_segments+append_list+omit_endlist',  # Better live streaming flags
-            '-hls_segment_type', 'mpegts',  # Explicit segment type
-            '-hls_segment_filename', str(stream_dir / 'segment_%03d.ts'),
-            '-hls_playlist_type', 'event',  # Event playlist for live streams
-            '-hls_allow_cache', '0',     # Disable caching for live streams
+            '-hls_time', '6',            # 6-second segments
+            '-hls_list_size', '3',       # Keep 3 segments
+            '-hls_flags', 'delete_segments',  # Delete old segments
+            '-hls_segment_filename', str(stream_dir.absolute() / 'segment_%03d.ts'),
             '-hls_base_url', f'http://127.0.0.1:5000/api/stream/hls/{stream_id}/',  # Base URL for segments
             '-y',                        # Overwrite output files
-            '-loglevel', 'info',         # Less verbose logging
-            str(stream_dir / 'playlist.m3u8')
+            '-loglevel', 'verbose',      # More verbose logging for debugging
+            str(stream_dir.absolute() / 'playlist.m3u8')
         ])
 
         print(f"Starting FFmpeg conversion for stream {stream_id}")
+        print(f"Working directory: {stream_dir}")
+        print(f"Output file: {stream_dir / 'playlist.m3u8'}")
         # Don't print the full command if it contains credentials
         if username and password:
             safe_cmd = [arg if not (username in arg and password in arg) else '[CREDENTIALS_HIDDEN]' for arg in ffmpeg_cmd]
@@ -169,9 +155,10 @@ def start_rtsp_conversion(rtsp_url, stream_id, ffmpeg_path, username=None, passw
         process = subprocess.Popen(
             ffmpeg_cmd,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stderr=subprocess.STDOUT,  # Redirect stderr to stdout
             universal_newlines=True,
-            cwd=str(stream_dir)  # Set working directory to stream directory
+            cwd=os.getcwd(),  # Use current working directory (backend root)
+            creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
         )
 
         # Store process info (without exposing credentials)
@@ -196,6 +183,14 @@ def start_rtsp_conversion(rtsp_url, stream_id, ffmpeg_path, username=None, passw
         )
         monitor_thread.start()
 
+        # Start output reading thread
+        output_thread = threading.Thread(
+            target=read_ffmpeg_output,
+            args=(stream_id, process),
+            daemon=True
+        )
+        output_thread.start()
+
         return True
 
     except Exception as e:
@@ -205,6 +200,20 @@ def start_rtsp_conversion(rtsp_url, stream_id, ffmpeg_path, username=None, passw
             del active_streams[stream_id]
         return False
 
+def read_ffmpeg_output(stream_id, process):
+    """Read FFmpeg output in real-time for debugging"""
+    try:
+        while process.poll() is None:
+            line = process.stdout.readline()
+            if line:
+                print(f"FFmpeg [{stream_id[:8]}]: {line.strip()}")
+                if stream_id in active_streams:
+                    active_streams[stream_id]['logs'].append(f"OUTPUT: {line.strip()}")
+            else:
+                time.sleep(0.1)
+    except Exception as e:
+        print(f"Error reading FFmpeg output for {stream_id}: {e}")
+
 def monitor_stream(stream_id, process):
     """Monitor FFmpeg process and handle cleanup"""
     try:
@@ -213,15 +222,22 @@ def monitor_stream(stream_id, process):
 
         if process.poll() is not None:
             # Process ended quickly, likely an error
-            stderr_output = process.stderr.read() if process.stderr else "No error output"
-            stdout_output = process.stdout.read() if process.stdout else "No stdout output"
-            print(f"Stream {stream_id} ended early. Error: {stderr_output}")
+            try:
+                stderr_output = process.stderr.read() if process.stderr else "No error output"
+                stdout_output = process.stdout.read() if process.stdout else "No stdout output"
+            except:
+                stderr_output = "Could not read stderr"
+                stdout_output = "Could not read stdout"
+
+            print(f"Stream {stream_id} ended early. Return code: {process.returncode}")
+            print(f"Stream {stream_id} stderr: {stderr_output}")
             print(f"Stream {stream_id} stdout: {stdout_output}")
 
             # Update stream status
             if stream_id in active_streams:
                 active_streams[stream_id]['status'] = 'error'
-                active_streams[stream_id]['error'] = f"FFmpeg error: {stderr_output[:200]}"
+                active_streams[stream_id]['error'] = f"FFmpeg process ended with code {process.returncode}: {stderr_output[:200]}"
+                active_streams[stream_id]['logs'].append(f"RETURN_CODE: {process.returncode}")
                 active_streams[stream_id]['logs'].append(f"STDERR: {stderr_output}")
                 active_streams[stream_id]['logs'].append(f"STDOUT: {stdout_output}")
 

@@ -37,8 +37,8 @@ export default function OverlayManager({ overlays, onCreateOverlay, onDeleteOver
   };
 
   return (
-    <div className="w-80 bg-background border-l p-4 space-y-4">
-      <h3 className="font-semibold text-lg">Overlay Manager</h3>
+    <div className="w-full max-w-md mx-auto space-y-4">
+      <h3 className="font-semibold text-lg sr-only">Overlay Manager</h3>
       
       {/* Create New Overlay */}
       <Card>

@@ -3,6 +3,11 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Smooth scrolling for the entire page */
+html {
+  scroll-behavior: smooth;
+}
+
 :root {
   /* Updated to premium dark teal color palette from design brief */
   --background: oklch(0.96 0.01 210); /* Light gray background */

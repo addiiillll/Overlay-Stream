@@ -1,28 +1,34 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer"
 import EnhancedVideoPlayer from "@/components/EnhancedVideoPlayer"
 import OverlayManager from "@/components/OverlayManager"
-import OverlayCanvas from "@/components/OverlayCanvas"
+import { useIsMobile } from "@/hooks/use-mobile"
 import { api } from "@/lib/api"
 import type { Overlay } from "@/lib/types"
 import { Play, Settings, ChevronDown, TestTube, AlertCircle, CheckCircle, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 
 export default function LiveDemo() {
-  const [rtspUrl, setRtspUrl] = useState('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4')
+  const [rtspUrl, setRtspUrl] = useState('rtsp://127.0.0.1:8554/mystream')
   const [streamUrl, setStreamUrl] = useState('')
   const [overlays, setOverlays] = useState<Overlay[]>([])
   const [isStreaming, setIsStreaming] = useState(false)
-  const [showManager, setShowManager] = useState(false)
+  const [showManager, setShowManager] = useState(true)
   const [streamInfo, setStreamInfo] = useState<any>(null)
-  const [showDebug, setShowDebug] = useState(false)
+  const [drawerOpen, setDrawerOpen] = useState(false)
+
+  const isMobile = useIsMobile()
+
+  // Store scroll position to prevent auto-scroll on drawer close
+  const scrollPositionRef = useRef<number>(0)
 
   // Authentication and connection options
   const [username, setUsername] = useState('')
@@ -224,17 +230,17 @@ export default function LiveDemo() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center mb-12">
+      <div className="container mx-auto px-4 py-4 md:py-8">
+        <div className="text-center mb-8 md:mb-12">
           <div className="flex items-center justify-center gap-3 mb-4">
             <div className="p-2 rounded-full bg-gradient-to-r from-primary to-primary/80">
               <Sparkles className="h-6 w-6 text-primary-foreground" />
             </div>
-            <h1 className="font-heading font-bold text-3xl md:text-4xl bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-              StreamOverlay Pro
+            <h1 className="font-heading font-bold text-2xl sm:text-3xl md:text-4xl bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+              OverlayStream
             </h1>
           </div>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-base sm:text-lg max-w-2xl mx-auto px-4">
             Transform your livestreams with professional overlays. Convert RTSP streams to HLS and add dynamic graphics in real-time.
           </p>
         </div>
@@ -243,68 +249,71 @@ export default function LiveDemo() {
           <div className="max-w-3xl mx-auto">
             <Card className="border-0 shadow-2xl bg-card/80 backdrop-blur-sm">
               <CardHeader className="text-center pb-6">
-                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                <CardTitle className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
                   Start Your Livestream
                 </CardTitle>
-                <CardDescription className="text-base">
+                <CardDescription className="text-sm sm:text-base px-4">
                   Enter an RTSP URL to begin streaming with professional overlay capabilities
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="space-y-3">
-                  <Label htmlFor="rtsp-url" className="text-sm font-medium">Stream URL</Label>
+                  <Label htmlFor="rtsp-url" className="text-sm font-medium text-foreground/80">Stream URL</Label>
                   <Input
                     id="rtsp-url"
                     type="text"
-                    placeholder="rtsp://your-stream-url-here"
+                    placeholder="rtsp://your-stream-url-here or https://video-url.mp4"
                     value={rtspUrl}
                     onChange={(e) => setRtspUrl(e.target.value)}
-                    className="font-mono text-sm h-12 bg-background/50 border-2 focus:border-primary/50 transition-colors"
+                    className="font-mono text-sm h-12 bg-background/80 border-border/60 hover:border-border focus:border-primary/50 transition-all duration-200 shadow-sm focus:shadow-md"
                   />
                 </div>
 
                 <Collapsible open={showAdvanced} onOpenChange={setShowAdvanced}>
                   <CollapsibleTrigger asChild>
-                    <Button variant="outline" className="w-full h-12 bg-background/50 hover:bg-background/80 transition-colors">
-                      <Settings className="h-4 w-4 mr-2" />
-                      Advanced Options
-                      <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
+                    <Button
+                      variant="outline"
+                      className="w-full h-12 bg-card/50 border-border/50 hover:border-border transition-all duration-200 shadow-sm hover:shadow-md"
+                    >
+                      <Settings className="h-4 w-4 mr-2 text-foreground" />
+                      <span className="font-medium">Advanced Options</span>
+                      <ChevronDown className={`h-4 w-4 ml-auto transition-transform duration-200 ${showAdvanced ? 'rotate-180' : ''}`} />
                     </Button>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="space-y-6 mt-6 p-4 bg-muted/30 rounded-lg border">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="username" className="text-sm font-medium">Username (optional)</Label>
+                  <CollapsibleContent className="space-y-6 mt-4 p-6 bg-card/30 backdrop-blur-sm rounded-lg border border-border/50 shadow-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-3">
+                        <Label htmlFor="username" className="text-sm font-medium text-foreground/80">Username (optional)</Label>
                         <Input
                           id="username"
                           type="text"
-                          placeholder="username"
+                          placeholder="Enter username"
                           value={username}
                           onChange={(e) => setUsername(e.target.value)}
-                          className="bg-background/50"
+                          className="bg-background/80 border-border/60 hover:border-border focus:border-primary/50 transition-colors"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="password" className="text-sm font-medium">Password (optional)</Label>
+                      <div className="space-y-3">
+                        <Label htmlFor="password" className="text-sm font-medium text-foreground/80">Password (optional)</Label>
                         <Input
                           id="password"
                           type="password"
-                          placeholder="password"
+                          placeholder="Enter password"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
-                          className="bg-background/50"
+                          className="bg-background/80 border-border/60 hover:border-border focus:border-primary/50 transition-colors"
                         />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="transport" className="text-sm font-medium">RTSP Transport</Label>
+                    <div className="space-y-3">
+                      <Label htmlFor="transport" className="text-sm font-medium text-foreground/80">RTSP Transport Protocol</Label>
                       <Select value={rtspTransport} onValueChange={(value: 'tcp' | 'udp') => setRtspTransport(value)}>
-                        <SelectTrigger className="bg-background/50">
+                        <SelectTrigger className="bg-background/80 border-border/60 hover:border-border focus:border-primary/50 transition-colors">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="tcp">TCP (Recommended)</SelectItem>
-                          <SelectItem value="udp">UDP</SelectItem>
+                        <SelectContent className="bg-popover/95 backdrop-blur-sm border-border/50">
+                          <SelectItem value="tcp" className="hover:bg-accent/50">TCP (Recommended)</SelectItem>
+                          <SelectItem value="udp" className="hover:bg-accent/50">UDP</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -312,24 +321,24 @@ export default function LiveDemo() {
               </Collapsible>
 
               {rtspUrl.startsWith('rtsp://') && (
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <Button
                     onClick={handleProbeStream}
                     variant="outline"
-                    className="flex-1"
+                    className="flex-1 h-11 bg-card/50 hover:bg-card/80 border-border/50 hover:border-border transition-all duration-200 shadow-sm hover:shadow-md"
                     disabled={isProbing}
                   >
-                    <TestTube className="h-4 w-4 mr-2" />
-                    {isProbing ? 'Probing...' : 'Probe Stream'}
+                    <TestTube className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="font-medium">{isProbing ? 'Probing...' : 'Probe Stream'}</span>
                   </Button>
                   <Button
                     onClick={handleTestConnection}
                     variant="outline"
-                    className="flex-1"
+                    className="flex-1 h-11 bg-card/50 hover:bg-card/80 border-border/50 hover:border-border transition-all duration-200 shadow-sm hover:shadow-md"
                     disabled={isTesting}
                   >
-                    <TestTube className="h-4 w-4 mr-2" />
-                    {isTesting ? 'Testing...' : 'Test Connection'}
+                    <TestTube className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <span className="font-medium">{isTesting ? 'Testing...' : 'Test Connection'}</span>
                   </Button>
                 </div>
               )}
@@ -413,35 +422,75 @@ export default function LiveDemo() {
             </Card>
           </div>
         ) : (
-          <div className="grid xl:grid-cols-4 lg:grid-cols-3 gap-8">
+          <div className={`${isMobile ? 'space-y-6' : 'grid xl:grid-cols-4 lg:grid-cols-3 gap-8'}`}>
             {/* Video Player with Overlays */}
-            <div className="xl:col-span-3 lg:col-span-2">
-              <Card className="overflow-hidden shadow-2xl bg-card/80 backdrop-blur-sm border-0">
+            <div className={`${isMobile ? 'w-full px-2' : 'xl:col-span-3 lg:col-span-2'}`}>
+              <Card className={`overflow-hidden shadow-2xl bg-card/80 backdrop-blur-sm border-0 ${isMobile ? 'mx-0' : ''}`}>
                 <CardHeader className="pb-4 flex flex-row items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                     Live Stream
                   </CardTitle>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowManager(!showManager)}
-                  >
-                    <Settings className="h-4 w-4 mr-1" />
-                    Overlays
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setShowDebug(!showDebug)}
-                  >
-                    Debug
-                  </Button>
-                </div>
-              </CardHeader>
+                  <div className="flex gap-2">
+                    {isMobile ? (
+                      // Mobile: Use Drawer with controlled state
+                      <Drawer
+                        open={drawerOpen}
+                        onOpenChange={(open) => {
+                          if (open) {
+                            // Store current scroll position when opening
+                            scrollPositionRef.current = window.scrollY;
+                          } else {
+                            // Restore scroll position when closing
+                            setTimeout(() => {
+                              window.scrollTo({
+                                top: scrollPositionRef.current,
+                                behavior: 'instant'
+                              });
+                            }, 50);
+                          }
+                          setDrawerOpen(open);
+                        }}
+                        shouldScaleBackground={false}
+                      >
+                        <DrawerTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Settings className="h-4 w-4 mr-1" />
+                            Overlays
+                          </Button>
+                        </DrawerTrigger>
+                        <DrawerContent className="max-h-[90vh]">
+                          <DrawerHeader className="pb-2">
+                            <DrawerTitle className="flex items-center gap-2 text-lg">
+                              <Settings className="h-5 w-5 text-primary" />
+                              Overlay Manager
+                            </DrawerTitle>
+                          </DrawerHeader>
+                          <div className="px-4 pb-6 overflow-y-auto flex-1">
+                            <OverlayManager
+                              overlays={overlays}
+                              onCreateOverlay={handleCreateOverlay}
+                              onDeleteOverlay={handleDeleteOverlay}
+                            />
+                          </div>
+                        </DrawerContent>
+                      </Drawer>
+                    ) : (
+                      // Desktop: Use toggle button
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowManager(!showManager)}
+                      >
+                        <Settings className="h-4 w-4 mr-1" />
+                        Overlays
+                      </Button>
+                    )}
+
+                  </div>
+                </CardHeader>
                 <CardContent className="p-0">
-                  <div className="relative">
+                  <div className={`relative ${isMobile ? 'min-h-[250px] sm:min-h-[300px]' : ''}`}>
                     <EnhancedVideoPlayer
                       rtspUrl={streamUrl}
                       onPlay={() => {
@@ -452,19 +501,19 @@ export default function LiveDemo() {
                         console.log('Video paused')
                         toast.info('Stream paused')
                       }}
-                      className="w-full"
-                    />
-                    <OverlayCanvas
+                      className={`w-full ${isMobile ? 'min-h-[250px] sm:min-h-[300px]' : ''}`}
                       overlays={overlays}
                       onOverlayUpdate={handleUpdateOverlay}
+                      onCreateOverlay={handleCreateOverlay}
+                      onDeleteOverlay={handleDeleteOverlay}
                     />
                   </div>
                 </CardContent>
             </Card>
           </div>
 
-            {/* Overlay Manager */}
-            {showManager && (
+            {/* Desktop Overlay Manager - Only show on desktop when not mobile */}
+            {!isMobile && showManager && (
               <div className="xl:col-span-1 lg:col-span-1">
                 <Card className="shadow-xl bg-card/80 backdrop-blur-sm border-0">
                   <CardHeader>
@@ -484,56 +533,7 @@ export default function LiveDemo() {
               </div>
             )}
 
-            {/* Debug Panel */}
-            {showDebug && (
-              <div className="xl:col-span-1 lg:col-span-1">
-                <Card className="shadow-xl bg-card/80 backdrop-blur-sm border-0">
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-primary" />
-                      Debug Info
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm">
-                    {streamInfo && (
-                      <>
-                        <div className="p-2 bg-muted/50 rounded">
-                          <strong className="text-primary">Type:</strong>
-                          <span className="ml-2">{streamInfo.type}</span>
-                        </div>
-                        <div className="p-2 bg-muted/50 rounded">
-                          <strong className="text-primary">Status:</strong>
-                          <span className="ml-2">{streamInfo.message}</span>
-                        </div>
-                        <div className="p-2 bg-muted/50 rounded">
-                          <strong className="text-primary">Stream URL:</strong>
-                          <div className="text-xs font-mono bg-background/50 p-2 rounded mt-1 break-all">
-                            {streamInfo.stream_url}
-                          </div>
-                        </div>
-                        {streamInfo.stream_id && (
-                          <div className="p-2 bg-muted/50 rounded">
-                            <strong className="text-primary">Stream ID:</strong>
-                            <span className="ml-2 font-mono text-xs">{streamInfo.stream_id}</span>
-                          </div>
-                        )}
-                        {streamInfo.note && (
-                          <div className="p-2 bg-primary/10 border border-primary/20 rounded">
-                            <span className="text-primary font-medium">{streamInfo.note}</span>
-                          </div>
-                        )}
-                      </>
-                    )}
-                    <div className="p-2 bg-muted/50 rounded">
-                      <strong className="text-primary">Original RTSP:</strong>
-                      <div className="text-xs font-mono bg-background/50 p-2 rounded mt-1 break-all">
-                        {rtspUrl}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+
         </div>
       )}
     </div>

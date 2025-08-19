@@ -14,23 +14,37 @@ import {
   AlertCircle,
   Loader2,
   Radio,
-  Clock
+  Clock,
+  Settings
 } from 'lucide-react';
 import Hls from 'hls.js';
 import { toast } from 'sonner';
+import OverlayCanvas from './OverlayCanvas';
+import OverlayManager from './OverlayManager';
+import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from './ui/drawer';
+import { useIsMobile } from '@/hooks/use-mobile';
+import type { Overlay } from '@/lib/types';
 
 interface EnhancedVideoPlayerProps {
   rtspUrl: string;
   onPlay?: () => void;
   onPause?: () => void;
   className?: string;
+  overlays?: Overlay[];
+  onOverlayUpdate?: (id: string, updates: Partial<Overlay>) => void;
+  onCreateOverlay?: (overlay: Omit<Overlay, '_id'>) => void;
+  onDeleteOverlay?: (id: string) => void;
 }
 
 export default function EnhancedVideoPlayer({
   rtspUrl,
   onPlay,
   onPause,
-  className = ''
+  className = '',
+  overlays = [],
+  onOverlayUpdate,
+  onCreateOverlay,
+  onDeleteOverlay
 }: EnhancedVideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(1);
@@ -39,6 +53,8 @@ export default function EnhancedVideoPlayer({
   const [error, setError] = useState<string | null>(null);
   const [streamType, setStreamType] = useState<string>('');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showFullscreenOverlayManager, setShowFullscreenOverlayManager] = useState(false);
+  const isMobile = useIsMobile();
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [showControls, setShowControls] = useState(true);
@@ -352,6 +368,13 @@ export default function EnhancedVideoPlayer({
       toast.success('Video loaded successfully');
     };
 
+    const handleEnded = () => {
+      console.log('Video ended');
+      setIsPlaying(false);
+      setError('Stream has ended');
+      toast.info('Stream has ended');
+    };
+
     const handleCanPlay = () => {
       console.log('Video can start playing');
       setCanPlay(true);
@@ -376,6 +399,7 @@ export default function EnhancedVideoPlayer({
     video.addEventListener('error', handleError);
     video.addEventListener('loadstart', handleLoadStart);
     video.addEventListener('loadeddata', handleLoadedData);
+    video.addEventListener('ended', handleEnded);
     video.addEventListener('canplay', handleCanPlay);
     video.addEventListener('canplaythrough', handleCanPlayThrough);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
@@ -389,6 +413,7 @@ export default function EnhancedVideoPlayer({
       video.removeEventListener('error', handleError);
       video.removeEventListener('loadstart', handleLoadStart);
       video.removeEventListener('loadeddata', handleLoadedData);
+      video.removeEventListener('ended', handleEnded);
       video.removeEventListener('canplay', handleCanPlay);
       video.removeEventListener('canplaythrough', handleCanPlayThrough);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
@@ -430,7 +455,7 @@ export default function EnhancedVideoPlayer({
           highBufferWatchdogPeriod: 2, // Check buffer health every 2 seconds
           nudgeOffset: 0.1, // Small nudge for playback issues
           nudgeMaxRetry: 3, // Retry nudging 3 times
-          maxSeekHole: 2, // Allow seeking over 2 second holes
+          // maxSeekHole: 2, // Allow seeking over 2 second holes (removed, not in HlsConfig)
           maxFragLookUpTolerance: 0.25, // Fragment lookup tolerance
           liveSyncDurationCount: 3, // Keep 3 segments for live sync
           liveMaxLatencyDurationCount: 10, // Maximum latency segments
@@ -480,6 +505,8 @@ export default function EnhancedVideoPlayer({
 
         hls.on(Hls.Events.BUFFER_EOS, () => {
           console.log('HLS buffer end of stream');
+          setError('Stream has ended');
+          toast.info('Stream has ended');
         });
 
         hls.on(Hls.Events.LEVEL_SWITCHING, (event, data) => {
@@ -494,6 +521,13 @@ export default function EnhancedVideoPlayer({
               if (process.env.NODE_ENV === 'development' && data && Object.keys(data).length > 0) {
                 console.debug('HLS error ignored (non-fatal startup error):', data);
               }
+              return;
+            }
+
+            // Check for stream end conditions
+            if (data.details === 'levelLoadError' && data.response?.code === 404) {
+              setError('Stream has ended or is no longer available');
+              toast.info('Stream has ended');
               return;
             }
 
@@ -707,17 +741,20 @@ export default function EnhancedVideoPlayer({
   }
 
   return (
-    <div 
+    <div
       ref={containerRef}
-      className={`relative bg-black rounded-lg overflow-hidden group ${className}`}
+      className={`relative bg-black rounded-lg overflow-hidden group ${className} ${isFullscreen ? 'rounded-none' : ''}`}
       onMouseMove={handleMouseMove}
       onMouseLeave={() => setShowControls(false)}
+      onTouchStart={() => setShowControls(true)}
     >
       <video
         ref={videoRef}
-        className="w-full aspect-video object-contain"
+        className="w-full aspect-video object-contain min-h-[200px]"
         playsInline
         onClick={togglePlay}
+        controls={false}
+        preload="metadata"
       />
 
       {/* Loading overlay */}
@@ -739,17 +776,68 @@ export default function EnhancedVideoPlayer({
         {/* Top bar */}
         <div className="absolute top-0 left-0 right-0 p-4">
           <div className="flex items-center justify-between text-white">
-            <div className="text-sm font-medium">
+            <div className="text-sm font-medium drop-shadow-lg bg-black/20 backdrop-blur-sm px-3 py-1 rounded-full border border-white/10">
               {streamType} {duration > 0 && `• ${formatTime(duration)}`}
             </div>
-            <Button
-              onClick={toggleFullscreen}
-              variant="ghost"
-              size="sm"
-              className="text-white hover:bg-white/20"
-            >
-              {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
-            </Button>
+            <div className="flex items-center gap-2">
+              {/* Fullscreen Overlay Manager - Only show in fullscreen */}
+              {isFullscreen && onCreateOverlay && onDeleteOverlay && (
+                isMobile ? (
+                  // Mobile: Use Drawer in fullscreen
+                  <Drawer
+                    open={showFullscreenOverlayManager}
+                    onOpenChange={setShowFullscreenOverlayManager}
+                    shouldScaleBackground={false}
+                  >
+                    <DrawerTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-white hover:bg-black/30 bg-black/20 backdrop-blur-sm shadow-lg border border-white/10"
+                        title="Manage Overlays"
+                      >
+                        <Settings className="h-4 w-4 drop-shadow-md" />
+                      </Button>
+                    </DrawerTrigger>
+                    <DrawerContent className="max-h-[90vh] z-[60]">
+                      <DrawerHeader className="pb-2">
+                        <DrawerTitle className="flex items-center gap-2 text-lg">
+                          <Settings className="h-5 w-5 text-primary" />
+                          Overlay Manager
+                        </DrawerTitle>
+                      </DrawerHeader>
+                      <div className="px-4 pb-6 overflow-y-auto flex-1">
+                        <OverlayManager
+                          overlays={overlays}
+                          onCreateOverlay={onCreateOverlay}
+                          onDeleteOverlay={onDeleteOverlay}
+                        />
+                      </div>
+                    </DrawerContent>
+                  </Drawer>
+                ) : (
+                  // Desktop: Simple button (could expand to show inline manager)
+                  <Button
+                    onClick={() => setShowFullscreenOverlayManager(!showFullscreenOverlayManager)}
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-black/30 bg-black/20 backdrop-blur-sm shadow-lg border border-white/10"
+                    title="Manage Overlays"
+                  >
+                    <Settings className="h-4 w-4 drop-shadow-md" />
+                  </Button>
+                )
+              )}
+              <Button
+                onClick={toggleFullscreen}
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-black/30 bg-black/20 backdrop-blur-sm shadow-lg border border-white/10"
+                title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+              >
+                {isFullscreen ? <Minimize className="h-4 w-4 drop-shadow-md" /> : <Maximize className="h-4 w-4 drop-shadow-md" />}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -798,10 +886,10 @@ export default function EnhancedVideoPlayer({
                 </div>
               </div>
               <div className="flex justify-between text-xs text-white/70 mt-1">
-                <span>
+                <span className="drop-shadow-md">
                   {isLive ? 'LIVE' : `-${formatTime(liveEdgeTime - currentTime)}`}
                 </span>
-                <span className="flex items-center gap-1">
+                <span className="flex items-center gap-1 drop-shadow-md">
                   <Clock className="h-3 w-3" />
                   Live Stream
                 </span>
@@ -816,15 +904,16 @@ export default function EnhancedVideoPlayer({
                 onClick={togglePlay}
                 variant="ghost"
                 size="sm"
-                className="text-white hover:bg-white/20"
+                className="text-white hover:bg-black/30 bg-black/20 backdrop-blur-sm shadow-lg border border-white/10"
                 disabled={isLoading || (!canPlay && !isStreamReady && !isPlaying)}
+                title={isPlaying ? "Pause" : "Play"}
               >
                 {isLoading ? (
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent drop-shadow-md" />
                 ) : isPlaying ? (
-                  <Pause className="h-5 w-5" />
+                  <Pause className="h-5 w-5 drop-shadow-md" />
                 ) : (
-                  <Play className="h-5 w-5" />
+                  <Play className="h-5 w-5 drop-shadow-md" />
                 )}
               </Button>
 
@@ -832,9 +921,10 @@ export default function EnhancedVideoPlayer({
                 onClick={toggleMute}
                 variant="ghost"
                 size="sm"
-                className="text-white hover:bg-white/20"
+                className="text-white hover:bg-black/30 bg-black/20 backdrop-blur-sm shadow-lg border border-white/10"
+                title={isMuted || volume === 0 ? "Unmute" : "Mute"}
               >
-                {isMuted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                {isMuted || volume === 0 ? <VolumeX className="h-4 w-4 drop-shadow-md" /> : <Volume2 className="h-4 w-4 drop-shadow-md" />}
               </Button>
 
               <div className="w-20">
@@ -853,14 +943,52 @@ export default function EnhancedVideoPlayer({
                 onClick={resetStream}
                 variant="ghost"
                 size="sm"
-                className="text-white hover:bg-white/20"
+                className="text-white hover:bg-black/30 bg-black/20 backdrop-blur-sm shadow-lg border border-white/10"
+                title="Reload Stream"
               >
-                <RotateCcw className="h-4 w-4" />
+                <RotateCcw className="h-4 w-4 drop-shadow-md" />
               </Button>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Desktop Fullscreen Overlay Manager */}
+      {isFullscreen && !isMobile && showFullscreenOverlayManager && onCreateOverlay && onDeleteOverlay && (
+        <div className="absolute top-16 right-4 w-80 max-h-[calc(100vh-8rem)] bg-card/95 backdrop-blur-md rounded-lg border shadow-2xl z-50 overflow-hidden animate-in slide-in-from-right-2 fade-in-0 duration-200">
+          <div className="p-4 border-b bg-card/50">
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Settings className="h-4 w-4 text-primary" />
+                Overlay Manager
+              </h3>
+              <Button
+                onClick={() => setShowFullscreenOverlayManager(false)}
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+              >
+                ×
+              </Button>
+            </div>
+          </div>
+          <div className="p-4 overflow-y-auto max-h-[calc(100vh-12rem)]">
+            <OverlayManager
+              overlays={overlays}
+              onCreateOverlay={onCreateOverlay}
+              onDeleteOverlay={onDeleteOverlay}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Overlay Canvas - positioned inside the video container so it works in fullscreen */}
+      {overlays.length > 0 && onOverlayUpdate && (
+        <OverlayCanvas
+          overlays={overlays}
+          onOverlayUpdate={onOverlayUpdate}
+        />
+      )}
     </div>
   );
 }

@@ -1,8 +1,8 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ThemeToggle } from "@/components/ui/theme-toggle"
@@ -23,8 +23,25 @@ import {
   Award,
 } from "lucide-react"
 
+
 export default function LandingPage() {
-  const [email, setEmail] = useState("")
+  const [isScrolled, setIsScrolled] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10)
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const scrollToDemo = () => {
+    const demoSection = document.getElementById('demo-section')
+    if (demoSection) {
+      demoSection.scrollIntoView({ behavior: 'smooth' })
+    }
+  }
 
   const features = [
     {
@@ -93,54 +110,68 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="sticky top-0 z-50 glass-effect border-b">
+      <nav className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+        isScrolled
+          ? 'bg-background/95 backdrop-blur-md border-b border-border/50 shadow-sm'
+          : 'bg-transparent'
+      }`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center animate-glow">
                 <Layers className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span className="font-heading font-bold text-xl">StreamOverlay Pro</span>
+              <span className="font-heading font-bold text-xl">OverlayStream</span>
             </div>
             <div className="flex items-center space-x-4">
               <ThemeToggle />
-              <Button size="sm">Get Started</Button>
+              <Button
+                size="sm"
+                onClick={scrollToDemo}
+                className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              >
+                View Demo
+              </Button>
             </div>
           </div>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden py-20 lg:py-32">
+      <section className="relative overflow-hidden pt-32 pb-20 lg:pt-40 lg:pb-32 min-h-screen flex items-center">
         <div className="absolute inset-0 gradient-teal-subtle" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
           <div className="text-center">
             <Badge variant="secondary" className="mb-6 animate-float bg-primary/10 text-primary border-primary/20">
               <Sparkles className="h-4 w-4 mr-1" />
               Now with AI-powered overlay suggestions
             </Badge>
             <h1 className="font-heading font-black text-4xl md:text-6xl lg:text-7xl mb-6 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Professional Video
+              Overlay while your 
               <br />
-              Overlay Management
+              Video Streams
             </h1>
-            <p className="text-xl md:text-2xl text-muted-foreground mb-8 max-w-3xl mx-auto leading-relaxed">
+            <p className="text-xl md:text-2xl text-muted-foreground mb-12 max-w-3xl mx-auto leading-relaxed">
               Transform your livestreams with dynamic overlays. Add custom text, logos, and graphics to any RTSP stream
               with our powerful, cloud-native platform.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-              <div className="flex gap-2 w-full sm:w-auto">
-                <Input
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="min-w-[300px] bg-card/50 backdrop-blur-sm"
-                />
-                <Button size="lg" className="whitespace-nowrap gradient-teal">
-                  Start Free Trial
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+              <Button
+                size="lg"
+                onClick={scrollToDemo}
+                className="px-8 py-4 text-lg font-semibold bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                <Video className="mr-2 h-5 w-5" />
+                View Live Demo
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="px-8 py-4 text-lg font-semibold bg-card/50 hover:bg-card/80 border-border/50 hover:border-border transition-all duration-300 shadow-sm hover:shadow-md"
+              >
+                Learn More
+              </Button>
             </div>
           </div>
         </div>
@@ -199,7 +230,7 @@ export default function LandingPage() {
       </section>
 
       {/* Demo Section */}
-      <section className="py-20 lg:py-32 bg-card/30 backdrop-blur-sm">
+      <section id="demo-section" className="py-20 lg:py-32 bg-card/30 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <LiveDemo />
         </div>
@@ -251,6 +282,7 @@ export default function LandingPage() {
               size="lg"
               variant="secondary"
               className="min-w-[200px] bg-white/20 hover:bg-white/30 text-white border-white/20"
+              suppressHydrationWarning
             >
               <TrendingUp className="mr-2 h-5 w-5" />
               Start Free Trial
@@ -259,6 +291,7 @@ export default function LandingPage() {
               size="lg"
               variant="outline"
               className="min-w-[200px] bg-white/10 border-white/20 text-white hover:bg-white/20"
+              suppressHydrationWarning
             >
               Schedule Demo
             </Button>
