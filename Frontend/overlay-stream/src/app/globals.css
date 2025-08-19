@@ -1,0 +1,178 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Updated to premium dark teal color palette from design brief */
+  --background: oklch(0.96 0.01 210); /* Light gray background */
+  --foreground: oklch(0.25 0.02 195); /* Dark gray text */
+  --card: oklch(1 0 0 / 0.8); /* Glass morphism white with transparency */
+  --card-foreground: oklch(0.25 0.02 195); /* Dark gray text on cards */
+  --popover: oklch(1 0 0 / 0.9); /* Light popover with transparency */
+  --popover-foreground: oklch(0.25 0.02 195); /* Dark gray text on popovers */
+  --primary: oklch(0.3 0.08 180); /* Dark teal primary */
+  --primary-foreground: oklch(1 0 0); /* White text on primary */
+  --secondary: oklch(0.47 0.12 180); /* Teal accent secondary */
+  --secondary-foreground: oklch(1 0 0); /* White text on secondary */
+  --muted: oklch(0.7 0.01 210); /* Muted gray */
+  --muted-foreground: oklch(0.45 0.02 195); /* Muted text */
+  --accent: oklch(0.47 0.12 180); /* Teal accent */
+  --accent-foreground: oklch(1 0 0); /* White text on accent */
+  --destructive: oklch(0.55 0.22 25); /* Red for destructive actions */
+  --destructive-foreground: oklch(1 0 0); /* White text on destructive */
+  --border: oklch(0.88 0.01 210); /* Light border */
+  --input: oklch(1 0 0); /* White input background */
+  --ring: oklch(0.3 0.08 180 / 0.5); /* Dark teal focus ring */
+  --chart-1: oklch(0.3 0.08 180); /* Chart color 1 - dark teal */
+  --chart-2: oklch(0.47 0.12 180); /* Chart color 2 - teal accent */
+  --chart-3: oklch(0.75 0.06 180); /* Chart color 3 - light teal */
+  --chart-4: oklch(0.9 0.03 180); /* Chart color 4 - very light teal */
+  --chart-5: oklch(1 0 0); /* Chart color 5 - white */
+  --radius: 0.75rem; /* Modern rounded corners */
+  --sidebar: oklch(0.96 0.01 210); /* Sidebar background */
+  --sidebar-foreground: oklch(0.25 0.02 195); /* Sidebar text */
+  --sidebar-primary: oklch(0.3 0.08 180); /* Sidebar primary */
+  --sidebar-primary-foreground: oklch(1 0 0); /* Sidebar primary text */
+  --sidebar-accent: oklch(0.47 0.12 180); /* Sidebar accent */
+  --sidebar-accent-foreground: oklch(1 0 0); /* Sidebar accent text */
+  --sidebar-border: oklch(0.88 0.01 210); /* Sidebar border */
+  --sidebar-ring: oklch(0.3 0.08 180 / 0.5); /* Sidebar focus ring */
+}
+
+.dark {
+  /* Updated dark mode colors to complement the dark teal theme */
+  --background: oklch(0.08 0.01 195); /* Very dark background */
+  --foreground: oklch(0.98 0 0); /* White text */
+  --card: oklch(0.12 0.02 195 / 0.8); /* Dark glass morphism card */
+  --card-foreground: oklch(0.98 0 0); /* White text on dark cards */
+  --popover: oklch(0.12 0.02 195 / 0.9); /* Dark popover */
+  --popover-foreground: oklch(0.98 0 0); /* White text on dark popovers */
+  --primary: oklch(0.55 0.15 180); /* Brighter teal for dark mode */
+  --primary-foreground: oklch(0.08 0.01 195); /* Dark text on bright primary */
+  --secondary: oklch(0.2 0.03 195); /* Dark secondary */
+  --secondary-foreground: oklch(0.98 0 0); /* White text on dark secondary */
+  --muted: oklch(0.2 0.02 195); /* Dark muted */
+  --muted-foreground: oklch(0.65 0.01 210); /* Light muted text */
+  --accent: oklch(0.55 0.15 180); /* Bright teal accent */
+  --accent-foreground: oklch(0.08 0.01 195); /* Dark text on bright accent */
+  --destructive: oklch(0.6 0.25 25); /* Bright red for dark mode */
+  --destructive-foreground: oklch(0.98 0 0); /* White text on destructive */
+  --border: oklch(0.2 0.02 195); /* Dark border */
+  --input: oklch(0.2 0.02 195); /* Dark input background */
+  --ring: oklch(0.55 0.15 180 / 0.6); /* Bright teal focus ring */
+  --chart-1: oklch(0.55 0.15 180); /* Chart color 1 - bright teal */
+  --chart-2: oklch(0.47 0.12 180); /* Chart color 2 - medium teal */
+  --chart-3: oklch(0.35 0.08 180); /* Chart color 3 - darker teal */
+  --chart-4: oklch(0.25 0.05 180); /* Chart color 4 - very dark teal */
+  --chart-5: oklch(0.75 0 0); /* Chart color 5 - light gray */
+  --sidebar: oklch(0.12 0.02 195); /* Dark sidebar */
+  --sidebar-foreground: oklch(0.98 0 0); /* White sidebar text */
+  --sidebar-primary: oklch(0.55 0.15 180); /* Bright teal sidebar primary */
+  --sidebar-primary-foreground: oklch(0.08 0.01 195); /* Dark text on bright primary */
+  --sidebar-accent: oklch(0.2 0.03 195); /* Dark sidebar accent */
+  --sidebar-accent-foreground: oklch(0.98 0 0); /* White text on dark accent */
+  --sidebar-border: oklch(0.2 0.02 195); /* Dark sidebar border */
+  --sidebar-ring: oklch(0.55 0.15 180 / 0.6); /* Bright teal sidebar focus ring */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Added custom animations and effects for premium feel */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes glow {
+  0%,
+  100% {
+    box-shadow: 0 0 20px oklch(0.3 0.08 180 / 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px oklch(0.3 0.08 180 / 0.5);
+  }
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 3s ease-in-out infinite;
+}
+
+.glass-effect {
+  backdrop-filter: blur(16px);
+  background: oklch(1 0 0 / 0.1);
+  border: 1px solid oklch(1 0 0 / 0.2);
+}
+
+.dark .glass-effect {
+  background: oklch(0 0 0 / 0.2);
+  border: 1px solid oklch(1 0 0 / 0.1);
+}
+
+/* Added premium gradient effects for dark teal theme */
+.gradient-teal {
+  background: linear-gradient(135deg, oklch(0.3 0.08 180), oklch(0.47 0.12 180));
+}
+
+.gradient-teal-subtle {
+  background: linear-gradient(135deg, oklch(0.3 0.08 180 / 0.1), oklch(0.47 0.12 180 / 0.05));
+}
+
+.dark .gradient-teal-subtle {
+  background: linear-gradient(135deg, oklch(0.55 0.15 180 / 0.1), oklch(0.47 0.12 180 / 0.05));
+}
