@@ -26,9 +26,26 @@ Navigate to the Backend directory:
 cd Backend
 ```
 
+Create and activate virtual environment:
+```bash
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+```
+
 Install Python dependencies:
 ```bash
 pip install -r requirements.txt
+```
+
+Copy environment configuration:
+```bash
+cp .env.example .env
 ```
 
 Start MongoDB service on your system.
@@ -45,6 +62,11 @@ The backend will start on `http://127.0.0.1:5000`
 Navigate to the Frontend directory:
 ```bash
 cd Frontend/overlay-stream
+```
+
+Copy environment configuration:
+```bash
+cp .env.example .env.local
 ```
 
 Install Node.js dependencies:

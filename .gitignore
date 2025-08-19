@@ -39,6 +39,9 @@ instance/
 .env.test.local
 .env.production.local
 
+# Allow example environment files
+!.env.example
+
 # Database
 *.db
 *.sqlite3
