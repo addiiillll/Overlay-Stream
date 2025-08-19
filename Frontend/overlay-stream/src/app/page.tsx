@@ -103,15 +103,6 @@ export default function LandingPage() {
               <span className="font-heading font-bold text-xl">StreamOverlay Pro</span>
             </div>
             <div className="flex items-center space-x-4">
-              <Button variant="ghost" size="sm">
-                Features
-              </Button>
-              <Button variant="ghost" size="sm">
-                Pricing
-              </Button>
-              <Button variant="ghost" size="sm">
-                Docs
-              </Button>
               <ThemeToggle />
               <Button size="sm">Get Started</Button>
             </div>
@@ -149,20 +140,6 @@ export default function LandingPage() {
                   Start Free Trial
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-              </div>
-            </div>
-            <div className="flex flex-wrap justify-center gap-8 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-primary" />
-                14-day free trial
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-primary" />
-                No credit card required
-              </div>
-              <div className="flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-primary" />
-                Cancel anytime
               </div>
             </div>
           </div>

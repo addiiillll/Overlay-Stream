@@ -2,9 +2,25 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 from routes.overlays import overlay_bp
 from routes.stream import stream_bp
+import os
+from pathlib import Path
 
 app = Flask(__name__)
-CORS(app)
+
+# Configure CORS with specific settings for streaming
+CORS(app, resources={
+    r"/api/*": {
+        "origins": ["http://localhost:3000", "http://127.0.0.1:3000"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Range", "Accept"],
+        "expose_headers": ["Content-Range", "Accept-Ranges", "Content-Length"],
+        "supports_credentials": False
+    }
+})
+
+# Create necessary directories
+STREAMS_DIR = Path("streams")
+STREAMS_DIR.mkdir(exist_ok=True)
 
 # Register blueprints
 app.register_blueprint(overlay_bp, url_prefix='/api')
